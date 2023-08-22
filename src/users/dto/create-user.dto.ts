@@ -1,4 +1,11 @@
-import { IsString, IsNotEmpty, IsEmail } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsEmail,
+  IsArray,
+  ArrayMinSize,
+  ArrayNotEmpty,
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 
@@ -19,4 +26,11 @@ export class CreateUserDto {
   @Transform(({ value }) => value.toUpperCase())
   @ApiProperty({ description: `User name` })
   readonly name: string;
+
+  @IsArray()
+  @ArrayNotEmpty()
+  @ArrayMinSize(1)
+  @IsString({ each: true })
+  @ApiProperty({ description: 'Roles assigned to the user', type: [Number] })
+  readonly roles: number[];
 }
