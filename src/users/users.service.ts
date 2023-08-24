@@ -30,11 +30,43 @@ export class UsersService {
     return data;
   }
 
+  async getUserRoles(userId: number) {
+    return this.prismaService.user.findUnique({
+      where: { id: userId },
+      include: {
+        roles: {
+          include: {
+            role: {
+              include: {
+                permissions: {
+                  include: {
+                    permission: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+  }
+
+  async getUserPermissions(where: Prisma.UserWhereUniqueInput) {
+    const userRoles = await this.getUserRoles(where.id);
+
+    const permissions = userRoles.roles
+      .flatMap((userRole) => userRole.role.permissions)
+      .map((rolePermission) => rolePermission.permission.name);
+
+    return permissions;
+  }
+
   async create(params: CreateUserDto): Promise<Partial<User>> {
     try {
+      const { roles, ...others } = params;
       const hashPassword = await bcrypt.hash(params.password, 10);
       const data: Prisma.UserCreateInput = {
-        ...params,
+        ...others,
         password: hashPassword,
       };
 
@@ -42,6 +74,17 @@ export class UsersService {
       const user = await this.prismaService.user.create({
         data,
       });
+
+      if (roles && roles.length > 0) {
+        for (const roleId of params.roles) {
+          await this.prismaService.userRole.create({
+            data: {
+              userId: user.id,
+              roleId: roleId,
+            },
+          });
+        }
+      }
 
       return exclude(user, ['password']);
     } catch (error) {

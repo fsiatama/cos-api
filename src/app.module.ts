@@ -17,7 +17,7 @@ import configuration from './config/configuration';
     }),
     AuthModule,
     UsersModule,
-    PermissionsModule
+    PermissionsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -9,11 +9,13 @@ import { UsersModule } from '../users/users.module';
 import { LocalStrategy } from './strategies/local.strategy';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import configuration from '../config/configuration';
+import { PermissionsModule } from '../permissions/permissions.module';
 
 @Module({
   imports: [
     UsersModule,
     PassportModule,
+    PermissionsModule,
     JwtModule.registerAsync({
       inject: [configuration.KEY],
       useFactory: (configService: ConfigType<typeof configuration>) => {

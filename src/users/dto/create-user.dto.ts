@@ -5,6 +5,7 @@ import {
   IsArray,
   ArrayMinSize,
   ArrayNotEmpty,
+  IsInt,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
@@ -30,7 +31,7 @@ export class CreateUserDto {
   @IsArray()
   @ArrayNotEmpty()
   @ArrayMinSize(1)
-  @IsString({ each: true })
+  @IsInt({ each: true })
   @ApiProperty({ description: 'Roles assigned to the user', type: [Number] })
   readonly roles: number[];
 }
