@@ -17,7 +17,7 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ApiTags } from '@nestjs/swagger';
 import { FilterDto } from '../models';
-import { checkAbilites } from '../auth/decorators/abilities.decorator';
+import { CheckAbilites } from '../auth/decorators/abilities.decorator';
 import { AbilitiesGuard } from '../auth/guards/abilities.guard';
 
 @UseGuards(AuthGuard('jwt'))
@@ -26,8 +26,8 @@ import { AbilitiesGuard } from '../auth/guards/abilities.guard';
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  @checkAbilites({ action: 'manage', subject: 'all' })
-  // @UseGuards(AbilitiesGuard)
+  @CheckAbilites({ action: 'manage', subject: 'users' })
+  @UseGuards(AbilitiesGuard)
   @Post()
   create(@Body() createUserDto: CreateUserDto): Promise<Partial<User>> {
     return this.usersService.create(createUserDto);

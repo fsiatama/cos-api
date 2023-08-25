@@ -1,6 +1,5 @@
 import * as Mustache from 'mustache';
 
-import { User } from '@prisma/client';
 import { Reflector } from '@nestjs/core';
 
 import { map, size } from 'lodash';
@@ -24,7 +23,6 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
-import { PermissionsService } from '../../permissions/permissions.service';
 import { PayloadTokenDto } from '../../models';
 
 export const actions = [
@@ -35,7 +33,7 @@ export const actions = [
   'delete',
 ] as const;
 
-export const subjects = ['User', 'all'] as const;
+export const subjects = ['Users', 'all'] as const;
 
 export type Abilities = [
   (typeof actions)[number],
@@ -52,7 +50,6 @@ export class AbilitiesGuard implements CanActivate {
   constructor(
     private reflector: Reflector,
     private prisma: PrismaService,
-    private permissionsService: PermissionsService,
   ) {}
 
   createAbility = (rules: RawRuleOf<AppAbility>[]) =>
@@ -66,9 +63,11 @@ export class AbilitiesGuard implements CanActivate {
     const request = context.switchToHttp().getRequest();
     const currentUser = request.user as PayloadTokenDto;
 
-    const userPermissions = await this.permissionsService.getUserPermissions(
-      currentUser.sub,
-    );
+    const userRoles = await this.getUserRoles(currentUser.sub);
+
+    const userPermissions = userRoles.roles
+      .flatMap((userRole) => userRole.role.permissions)
+      .map((rolePermission) => rolePermission.permission.name);
 
     const parsedUserPermissions = this.parseCondition(
       userPermissions,
@@ -79,6 +78,8 @@ export class AbilitiesGuard implements CanActivate {
       const ability = this.createAbility(Object(parsedUserPermissions));
 
       for await (const rule of rules) {
+        console.log(rule);
+
         let sub = {};
         if (size(rule?.conditions)) {
           const subId = +request.params['id'];
@@ -123,5 +124,26 @@ export class AbilitiesGuard implements CanActivate {
     });
     if (!subject) throw new NotFoundException(`${subName} not found`);
     return subject;
+  }
+
+  async getUserRoles(userId: number) {
+    return this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        roles: {
+          include: {
+            role: {
+              include: {
+                permissions: {
+                  include: {
+                    permission: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
   }
 }
