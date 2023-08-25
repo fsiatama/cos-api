@@ -6,6 +6,7 @@ import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { PermissionsModule } from './permissions/permissions.module';
+import { CaslModule } from './casl/casl.module';
 import configuration from './config/configuration';
 
 @Module({
@@ -18,6 +19,7 @@ import configuration from './config/configuration';
     AuthModule,
     UsersModule,
     PermissionsModule,
+    CaslModule,
   ],
   controllers: [AppController],
   providers: [AppService],

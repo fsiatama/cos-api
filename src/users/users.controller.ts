@@ -17,8 +17,8 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ApiTags } from '@nestjs/swagger';
 import { FilterDto } from '../models';
-import { CheckAbilites } from '../auth/decorators/abilities.decorator';
-import { AbilitiesGuard } from '../auth/guards/abilities.guard';
+import { CheckPolicies, PoliciesGuard } from '../auth/guards/policies.guard';
+import { Action, AppAbility } from '../casl/casl-ability.factory';
 
 @UseGuards(AuthGuard('jwt'))
 @ApiTags('users')
@@ -26,9 +26,9 @@ import { AbilitiesGuard } from '../auth/guards/abilities.guard';
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  @CheckAbilites({ action: 'manage', subject: 'users' })
-  @UseGuards(AbilitiesGuard)
   @Post()
+  @UseGuards(PoliciesGuard)
+  @CheckPolicies((ability: AppAbility) => ability.can(Action.Manage, 'users'))
   create(@Body() createUserDto: CreateUserDto): Promise<Partial<User>> {
     return this.usersService.create(createUserDto);
   }
@@ -41,7 +41,7 @@ export class UsersController {
   @Get('profile')
   getProfile(@Request() req) {
     const { sub: id } = req.user;
-    return this.usersService.getUserPermissions({ id });
+    return this.usersService.findOne({ id });
   }
 
   @Get(':id')

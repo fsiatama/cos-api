@@ -30,37 +30,6 @@ export class UsersService {
     return data;
   }
 
-  async getUserRoles(userId: number) {
-    return this.prismaService.user.findUnique({
-      where: { id: userId },
-      include: {
-        roles: {
-          include: {
-            role: {
-              include: {
-                permissions: {
-                  include: {
-                    permission: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    });
-  }
-
-  async getUserPermissions(where: Prisma.UserWhereUniqueInput) {
-    const userRoles = await this.getUserRoles(where.id);
-
-    const permissions = userRoles.roles
-      .flatMap((userRole) => userRole.role.permissions)
-      .map((rolePermission) => rolePermission.permission.name);
-
-    return permissions;
-  }
-
   async create(params: CreateUserDto): Promise<Partial<User>> {
     try {
       const { roles, ...others } = params;
