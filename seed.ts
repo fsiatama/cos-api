@@ -14,6 +14,15 @@ async function main() {
     },
   });
 
+  const manageUsers = await prisma.permission.create({
+    data: {
+      name: 'manage:users',
+      title: 'Users',
+      icon: 'users-icon',
+      route: '/users',
+    },
+  });
+
   const viewSettings = await prisma.permission.create({
     data: {
       name: 'view:settings',
@@ -66,6 +75,13 @@ async function main() {
     data: {
       roleId: adminRole.id,
       permissionId: viewSettings.id,
+    },
+  });
+
+  await prisma.rolePermission.create({
+    data: {
+      roleId: adminRole.id,
+      permissionId: manageUsers.id,
     },
   });
 
