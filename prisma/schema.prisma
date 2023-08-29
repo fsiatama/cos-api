@@ -5,13 +5,17 @@ generator client {
   provider = "prisma-client-js"
 }
 
+generator erd {
+  provider = "prisma-erd-generator"
+}
+
 datasource db {
-  provider = "mysql"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
 model User {
-  id       Int        @id @default(autoincrement())
+  id       String     @id @default(uuid())
   email    String     @unique
   password String
   name     String
@@ -19,35 +23,57 @@ model User {
 }
 
 model Role {
-  id          Int              @id @default(autoincrement())
-  name        String           @unique
-  permissions RolePermission[]
-  users       UserRole[]
+  id            String           @id @default(uuid())
+  name          String           @unique
+  permissions   RolePermission[]
+  users         UserRole[]
+  roleAttibutes RoleAttibute[]
 }
 
 model UserRole {
-  userId Int
-  roleId Int
-  user   User @relation(fields: [userId], references: [id])
-  role   Role @relation(fields: [roleId], references: [id])
+  userId String
+  roleId String
+  user   User   @relation(fields: [userId], references: [id])
+  role   Role   @relation(fields: [roleId], references: [id])
 
   @@id([userId, roleId])
 }
 
+model RoleAttibute {
+  id        String   @id @default(uuid())
+  fieldName String
+  required  Boolean
+  dataType  DataType
+  roleId    String
+  role      Role     @relation(fields: [roleId], references: [id])
+}
+
 model Permission {
-  id    Int              @id @default(autoincrement())
-  name  String           @unique
-  title String
-  icon  String
-  route String
-  roles RolePermission[]
+  id      String           @id @default(uuid())
+  action  String
+  subject String
+  title   String
+  icon    String
+  route   String
+  roles   RolePermission[]
+
+  @@unique([action, subject])
 }
 
 model RolePermission {
-  roleId       Int
-  permissionId Int
+  roleId       String
+  permissionId String
   role         Role       @relation(fields: [roleId], references: [id])
   permission   Permission @relation(fields: [permissionId], references: [id])
 
   @@id([roleId, permissionId])
+}
+
+enum DataType {
+  number
+  string
+  boolean
+  date
+  phoneNumber
+  ip
 }

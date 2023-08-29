@@ -7,6 +7,7 @@ import {
 import { Injectable } from '@nestjs/common';
 import { PermissionsService } from '../permissions/permissions.service';
 import { PayloadTokenDto } from '../models';
+import { Permission } from '@prisma/client';
 
 export enum Action {
   Manage = 'manage',
@@ -16,7 +17,9 @@ export enum Action {
   Delete = 'delete',
 }
 
-export type Subject = 'dashboard' | 'settings' | 'users';
+export enum Subject {
+  Users = 'users',
+}
 
 export const createAppAbility = createMongoAbility as CreateAbility<AppAbility>;
 
@@ -38,13 +41,13 @@ export class CaslAbilityFactory {
       user.sub,
     );
 
-    userPermissions.forEach((permission: string) => {
-      const [action, subject] = permission.split(':');
+    userPermissions.forEach((permission: Partial<Permission>) => {
+      const { action, subject } = permission;
       if (
         Object.values(Action).includes(action as Action) &&
-        isValidSubject(subject)
+        Object.values(Subject).includes(subject as Subject)
       ) {
-        can(action as Action, subject);
+        can(action as Action, subject as Subject);
       }
     });
 

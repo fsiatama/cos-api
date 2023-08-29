@@ -7,7 +7,8 @@ async function main() {
   // Crear permisos
   const readDashboard = await prisma.permission.create({
     data: {
-      name: 'read:dashboard',
+      action: 'read',
+      subject: 'dashboard',
       title: 'Dashboard',
       icon: 'dashboard-icon',
       route: '/dashboard',
@@ -16,7 +17,8 @@ async function main() {
 
   const manageUsers = await prisma.permission.create({
     data: {
-      name: 'manage:users',
+      action: 'manage',
+      subject: 'users',
       title: 'Users',
       icon: 'users-icon',
       route: '/users',
@@ -25,7 +27,8 @@ async function main() {
 
   const viewSettings = await prisma.permission.create({
     data: {
-      name: 'view:settings',
+      action: 'view',
+      subject: 'settings',
       title: 'Settings',
       icon: 'settings-icon',
       route: '/settings',

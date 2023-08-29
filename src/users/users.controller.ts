@@ -18,7 +18,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { ApiTags } from '@nestjs/swagger';
 import { FilterDto } from '../models';
 import { CheckPolicies, PoliciesGuard } from '../auth/guards/policies.guard';
-import { Action, AppAbility } from '../casl/casl-ability.factory';
+import { Action, AppAbility, Subject } from '../casl/casl-ability.factory';
 
 @UseGuards(AuthGuard('jwt'))
 @ApiTags('users')
@@ -28,7 +28,9 @@ export class UsersController {
 
   @Post()
   @UseGuards(PoliciesGuard)
-  @CheckPolicies((ability: AppAbility) => ability.can(Action.Manage, 'users'))
+  @CheckPolicies((ability: AppAbility) =>
+    ability.can(Action.Manage, Subject.Users),
+  )
   create(@Body() createUserDto: CreateUserDto): Promise<Partial<User>> {
     return this.usersService.create(createUserDto);
   }
@@ -45,12 +47,12 @@ export class UsersController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: number) {
+  findOne(@Param('id') id: string) {
     return this.usersService.findOne({ id });
   }
 
   @Patch(':id')
-  update(@Param('id') id: number, @Body() updateUserDto: UpdateUserDto) {
+  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
     const params = {
       where: { id },
       data: updateUserDto,

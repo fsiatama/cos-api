@@ -13,7 +13,7 @@ export class UsersService {
 
   private async validateReferences(
     data: CreateUserDto | UpdateUserDto,
-    id: number,
+    id: string,
   ) {
     if (data.email) {
       const existUsername = await this.findDuplicateEmail({
@@ -39,7 +39,7 @@ export class UsersService {
         password: hashPassword,
       };
 
-      await this.validateReferences(data, 0);
+      await this.validateReferences(data, '');
       const user = await this.prismaService.user.create({
         data,
       });
@@ -184,7 +184,7 @@ export class UsersService {
     });
   }
 
-  async batchRemove({ key }: { key: number[] }) {
+  async batchRemove({ key }: { key: string[] }) {
     try {
       return await this.prismaService.$transaction(async () => {
         await key.reduce(async (antPromise, item) => {

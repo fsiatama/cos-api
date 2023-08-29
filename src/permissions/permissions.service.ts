@@ -5,7 +5,7 @@ import { PrismaService } from '../database/prisma.service';
 export class PermissionsService {
   constructor(private prisma: PrismaService) {}
 
-  async getUserRoles(userId: number) {
+  async getUserRoles(userId: string) {
     return this.prisma.user.findUnique({
       where: { id: userId },
       include: {
@@ -26,12 +26,15 @@ export class PermissionsService {
     });
   }
 
-  async getUserPermissions(userId: number) {
+  async getUserPermissions(userId: string) {
     const userRoles = await this.getUserRoles(userId);
 
     const permissions = userRoles.roles
       .flatMap((userRole) => userRole.role.permissions)
-      .map((rolePermission) => rolePermission.permission.name);
+      .map((rolePermission) => ({
+        subject: rolePermission.permission.subject,
+        action: rolePermission.permission.action,
+      }));
 
     return permissions;
   }
