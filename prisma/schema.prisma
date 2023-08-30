@@ -15,11 +15,12 @@ datasource db {
 }
 
 model User {
-  id       String     @id @default(uuid())
-  email    String     @unique
-  password String
-  name     String
-  roles    UserRole[]
+  id             String     @id @default(uuid())
+  email          String     @unique
+  password       String
+  name           String
+  roles          UserRole[]
+  additionalInfo Json?      @db.Json
 }
 
 model Role {
