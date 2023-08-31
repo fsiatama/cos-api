@@ -15,12 +15,17 @@ datasource db {
 }
 
 model User {
-  id             String     @id @default(uuid())
-  email          String     @unique
-  password       String
-  name           String
-  roles          UserRole[]
-  additionalInfo Json?      @db.Json
+  id               String            @id @default(uuid())
+  email            String            @unique
+  password         String
+  name             String
+  roles            UserRole[]
+  additionalInfo   Json?             @db.Json
+  student          Student?
+  terms            Term[]
+  invoices         Invoice[]
+  contracts        Contract[]
+  contractConcepts ContractConcept[]
 }
 
 model Role {
@@ -72,56 +77,103 @@ model RolePermission {
 
 model Student {
   id        String     @id @default(uuid())
-  userId    String
+  userId    String     @unique
   user      User       @relation(fields: [userId], references: [id])
   contracts Contract[]
-  payments  Payment[]
+  invoices  Invoice[]
 }
 
 model Contract {
-  id        String       @id @default(uuid())
-  studentId String
-  student   Student      @relation(fields: [studentId], references: [id])
-  year      Int
-  semester  SemesterEnum
+  id               String            @id @default(uuid())
+  studentId        String
+  student          Student           @relation(fields: [studentId], references: [id])
+  year             Int
+  semester         SemesterEnum
+  terms            Term[]
+  contractConcepts ContractConcept[]
+  invoices         Invoice[]
+  uinsert          User              @relation(fields: [uinsertId], references: [id], onDelete: Restrict)
+  uinsertId        String
+  createdAt        DateTime          @default(now())
 
   @@unique([studentId, year, semester])
 }
 
 model Term {
-  id                 String                          @id @default(uuid())
-  months             Int
-  monthlyRate        Float
-  annualInterestRate Float
-  monthlyAmount      Float
-  latePaymentFee     Float
-  beginToApplyDate   DateTime
-  cutOffDay          Int
-  paymentDay         Int
-  uinsert            User                            @relation(fields: [uinsertId], references: [id], onDelete: Restrict)
-  uinsertId          String
-  createdAt          DateTime                        @default(now())
-  contractId         String
-  contract           Contract                        @relation(fields: [loanId], references: [id], onDelete: Cascade)
-  paymentAscConcepts TermPaymentAssociatedConcepts[]
+  id               String   @id @default(uuid())
+  months           Int
+  monthlyRate      Float
+  latePaymentFee   Float
+  beginToApplyDate DateTime
+  paymentDay       Int
+  contractId       String
+  contract         Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  uinsert          User     @relation(fields: [uinsertId], references: [id], onDelete: Restrict)
+  uinsertId        String
+  createdAt        DateTime @default(now())
+}
+
+model ContractConcept {
+  id          String   @id @default(uuid())
+  amount      Float
+  description String?
+  contractId  String
+  contract    Contract @relation(fields: [contractId], references: [id])
+  conceptId   String
+  concept     Concept  @relation(fields: [conceptId], references: [id])
+  uinsert     User     @relation(fields: [uinsertId], references: [id], onDelete: Restrict)
+  uinsertId   String
+  createdAt   DateTime @default(now())
+}
+
+model Invoice {
+  id            String            @id @default(uuid())
+  invoiceNumber String
+  invoiceDate   DateTime          @default(now())
+  status        InvoiceStatusEnum
+  invoiceDetail InvoiceDetail[]
+  studentId     String
+  student       Student           @relation(fields: [studentId], references: [id])
+  contractId    String?
+  contract      Contract?         @relation(fields: [contractId], references: [id])
+  uinsertId     String
+  uinsert       User              @relation(fields: [uinsertId], references: [id], onDelete: Restrict)
+  createdAt     DateTime          @default(now())
+  Payment       Payment[]
+}
+
+model InvoiceDetail {
+  id          String  @id @default(uuid())
+  invoiceId   String
+  invoice     Invoice @relation(fields: [invoiceId], references: [id])
+  amount      Float
+  description String?
+  conceptId   String
+  concept     Concept @relation(fields: [conceptId], references: [id])
+}
+
+model PaymentMethod {
+  id       String    @id @default(uuid())
+  name     String
+  payments Payment[]
+}
+
+model Payment {
+  id              String        @id @default(uuid())
+  amount          Int
+  paymentMethodId String
+  paymentMethod   PaymentMethod @relation(fields: [paymentMethodId], references: [id])
+  invoiceId       String
+  invoice         Invoice       @relation(fields: [invoiceId], references: [id])
 }
 
 model Concept {
-  id                 String                          @id @default(uuid())
-  name               String                          @unique
-  conceptType        ConceptTypeEnum                 @default(CREDIT)
-  createdAt          DateTime                        @default(now())
-  transactions       Transaction[]
-  paymentAscConcepts TermPaymentAssociatedConcepts[]
-}
-
-model TermPaymentAssociatedConcepts {
-  id        String  @id @default(uuid())
-  amount    Float
-  concept   Concept @relation(fields: [conceptId], references: [id], onDelete: Restrict)
-  conceptId String
-  term      Term    @relation(fields: [termId], references: [id], onDelete: Cascade)
-  termId    String
+  id               String            @id @default(uuid())
+  name             String            @unique
+  conceptType      ConceptTypeEnum   @default(CREDIT)
+  createdAt        DateTime          @default(now())
+  InvoiceDetail    InvoiceDetail[]
+  contractConcepts ContractConcept[]
 }
 
 enum SemesterEnum {
@@ -143,4 +195,11 @@ enum DataTypeEnum {
 enum ConceptTypeEnum {
   DEBIT
   CREDIT
+}
+
+enum InvoiceStatusEnum {
+  DRAFT
+  PENDING
+  CANCELLED
+  APPROVED
 }
