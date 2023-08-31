@@ -41,12 +41,12 @@ model UserRole {
 }
 
 model RoleAttibute {
-  id        String   @id @default(uuid())
+  id        String       @id @default(uuid())
   fieldName String
   required  Boolean
-  dataType  DataType
+  dataType  DataTypeEnum
   roleId    String
-  role      Role     @relation(fields: [roleId], references: [id])
+  role      Role         @relation(fields: [roleId], references: [id])
 }
 
 model Permission {
@@ -70,11 +70,77 @@ model RolePermission {
   @@id([roleId, permissionId])
 }
 
-enum DataType {
-  number
-  string
-  boolean
-  date
-  phoneNumber
-  ip
+model Student {
+  id        String     @id @default(uuid())
+  userId    String
+  user      User       @relation(fields: [userId], references: [id])
+  contracts Contract[]
+  payments  Payment[]
+}
+
+model Contract {
+  id        String       @id @default(uuid())
+  studentId String
+  student   Student      @relation(fields: [studentId], references: [id])
+  year      Int
+  semester  SemesterEnum
+
+  @@unique([studentId, year, semester])
+}
+
+model Term {
+  id                 String                          @id @default(uuid())
+  months             Int
+  monthlyRate        Float
+  annualInterestRate Float
+  monthlyAmount      Float
+  latePaymentFee     Float
+  beginToApplyDate   DateTime
+  cutOffDay          Int
+  paymentDay         Int
+  uinsert            User                            @relation(fields: [uinsertId], references: [id], onDelete: Restrict)
+  uinsertId          String
+  createdAt          DateTime                        @default(now())
+  contractId         String
+  contract           Contract                        @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  paymentAscConcepts TermPaymentAssociatedConcepts[]
+}
+
+model Concept {
+  id                 String                          @id @default(uuid())
+  name               String                          @unique
+  conceptType        ConceptTypeEnum                 @default(CREDIT)
+  createdAt          DateTime                        @default(now())
+  transactions       Transaction[]
+  paymentAscConcepts TermPaymentAssociatedConcepts[]
+}
+
+model TermPaymentAssociatedConcepts {
+  id        String  @id @default(uuid())
+  amount    Float
+  concept   Concept @relation(fields: [conceptId], references: [id], onDelete: Restrict)
+  conceptId String
+  term      Term    @relation(fields: [termId], references: [id], onDelete: Cascade)
+  termId    String
+}
+
+enum SemesterEnum {
+  FALL
+  WINTER
+  SPRING
+  SUMMER
+}
+
+enum DataTypeEnum {
+  NUMBER
+  STRING
+  BOOLEAN
+  DATE
+  PHONENUMBER
+  IP
+}
+
+enum ConceptTypeEnum {
+  DEBIT
+  CREDIT
 }
