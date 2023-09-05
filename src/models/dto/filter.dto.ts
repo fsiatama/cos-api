@@ -1,9 +1,4 @@
-import {
-  IsOptional,
-  IsPositive,
-  IsString,
-  Min,
-} from 'class-validator';
+import { IsOptional, IsPositive, IsString, IsUUID, Min } from 'class-validator';
 
 export class FilterDto {
   @IsOptional()
@@ -20,4 +15,9 @@ export class FilterDto {
 
   @IsOptional()
   sort: string;
+}
+
+export class UUIDDto {
+  @IsUUID()
+  readonly id: string;
 }

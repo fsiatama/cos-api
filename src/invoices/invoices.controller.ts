@@ -8,13 +8,16 @@ import {
   Delete,
   Request,
   UseGuards,
+  Query,
 } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
 import { User } from '@prisma/client';
 import { ApiTags } from '@nestjs/swagger';
 import { InvoicesService } from './invoices.service';
 import { UpdateInvoiceDto } from './dto/update-invoice.dto';
-import { InvoiceDto } from '../models';
-import { AuthGuard } from '@nestjs/passport';
+import { FilterDto, InvoiceDto, UUIDDto } from '../models';
+import { CheckPolicies, PoliciesGuard } from '../auth/guards/policies.guard';
+import { Action, AppAbility, Subject } from '../casl/casl-ability.factory';
 
 @UseGuards(AuthGuard('jwt'))
 @ApiTags('invoices')
@@ -23,28 +26,55 @@ export class InvoicesController {
   constructor(private readonly invoicesService: InvoicesService) {}
 
   @Post()
+  @UseGuards(PoliciesGuard)
+  @CheckPolicies((ability: AppAbility) =>
+    ability.can(Action.Create, Subject.Invoices),
+  )
   create(@Body() createInvoiceDto: InvoiceDto, @Request() req: { user: User }) {
     const userId = req.user.id;
     return this.invoicesService.create(createInvoiceDto, userId);
   }
 
   @Get()
-  findAll() {
-    return this.invoicesService.findAll();
+  @UseGuards(PoliciesGuard)
+  @CheckPolicies((ability: AppAbility) =>
+    ability.can(Action.Read, Subject.Invoices),
+  )
+  findAll(@Query() params: FilterDto) {
+    return this.invoicesService.findAll(params);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.invoicesService.findOne(+id);
+  @UseGuards(PoliciesGuard)
+  @CheckPolicies((ability: AppAbility) =>
+    ability.can(Action.Read, Subject.Invoices),
+  )
+  findOne(@Param() urlParams: UUIDDto) {
+    return this.invoicesService.findOne({ id: urlParams.id });
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateInvoiceDto: UpdateInvoiceDto) {
-    return this.invoicesService.update(+id, updateInvoiceDto);
+  @UseGuards(PoliciesGuard)
+  @CheckPolicies((ability: AppAbility) =>
+    ability.can(Action.Update, Subject.Invoices),
+  )
+  update(
+    @Param() urlParams: UUIDDto,
+    @Body() updateInvoiceDto: UpdateInvoiceDto,
+  ) {
+    const params = {
+      where: { id: urlParams.id },
+      data: updateInvoiceDto,
+    };
+    return this.invoicesService.update(params);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.invoicesService.remove(+id);
+  @UseGuards(PoliciesGuard)
+  @CheckPolicies((ability: AppAbility) =>
+    ability.can(Action.Delete, Subject.Invoices),
+  )
+  remove(@Param() urlParams: UUIDDto) {
+    return this.invoicesService.remove(urlParams);
   }
 }

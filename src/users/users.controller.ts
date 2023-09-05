@@ -29,7 +29,7 @@ export class UsersController {
   @Post()
   @UseGuards(PoliciesGuard)
   @CheckPolicies((ability: AppAbility) =>
-    ability.can(Action.Manage, Subject.Users),
+    ability.can(Action.Create, Subject.Users),
   )
   create(@Body() createUserDto: CreateUserDto): Promise<Partial<User>> {
     return this.usersService.create(createUserDto);

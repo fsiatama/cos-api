@@ -9,6 +9,7 @@ import { PermissionsModule } from './permissions/permissions.module';
 import { CaslModule } from './casl/casl.module';
 import { InvoicesModule } from './invoices/invoices.module';
 import { StudentsModule } from './students/students.module';
+import { InvoiceDetailsModule } from './invoice-details/invoice-details.module';
 import configuration from './config/configuration';
 
 @Module({
@@ -24,6 +25,7 @@ import configuration from './config/configuration';
     CaslModule,
     InvoicesModule,
     StudentsModule,
+    InvoiceDetailsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
