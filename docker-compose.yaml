@@ -11,20 +11,29 @@ services:
       POSTGRES_DB: ${POSTGRES_DATABASE}
     ports:
       - '5432:5432'
-    expose:
-      - 5432
+    networks:
+      - postgres
+    restart: unless-stopped
   pgadmin:
+    container_name: pgadmin_container
     image: dpage/pgadmin4
-    container_name: pgadmin4_container
-    restart: always
-    ports:
-      - "8888:80"
     environment:
-      PGADMIN_DEFAULT_EMAIL: user-name@domain-name.com
-      PGADMIN_DEFAULT_PASSWORD: strong-password
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-pgadmin4@pgadmin.org}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
     volumes:
-      - pgadmin-data:/var/lib/pgadmin
+      - pgadmin:/var/lib/pgadmin
+
+    ports:
+      - '${PGADMIN_PORT:-5050}:80'
+    networks:
+      - postgres
+    restart: unless-stopped
+
+networks:
+  postgres:
+    driver: bridge
 
 volumes:
   master_data:
-  pgadmin-data:
+  pgadmin:
