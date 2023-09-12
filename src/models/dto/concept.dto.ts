@@ -1,4 +1,4 @@
-import { IsString, IsDefined, IsIn } from 'class-validator';
+import { IsString, IsDefined, IsIn, IsBoolean } from 'class-validator';
 import { getEnumValues } from '../helpers';
 import { ApiProperty } from '@nestjs/swagger';
 import { ConceptTypeEnum } from '@prisma/client';
@@ -13,4 +13,9 @@ export class ConceptDto {
   @IsIn(getEnumValues(ConceptTypeEnum))
   @ApiProperty()
   readonly conceptType!: ConceptTypeEnum;
+
+  @IsDefined()
+  @IsBoolean()
+  @ApiProperty()
+  readonly isToThirdParty!: boolean;
 }

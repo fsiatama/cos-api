@@ -77,4 +77,13 @@ export class InvoicesController {
   remove(@Param() urlParams: UUIDDto) {
     return this.invoicesService.remove(urlParams);
   }
+
+  @Delete('batch')
+  @UseGuards(PoliciesGuard)
+  @CheckPolicies((ability: AppAbility) =>
+    ability.can(Action.Delete, Subject.Invoices),
+  )
+  batchRemove(@Body() keys: { key: string[] }) {
+    return this.invoicesService.batchRemove(keys);
+  }
 }

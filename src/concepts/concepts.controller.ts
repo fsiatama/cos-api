@@ -9,22 +9,34 @@ import {
   UseGuards,
   Query,
 } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
+import { ApiTags } from '@nestjs/swagger';
 import { ConceptsService } from './concepts.service';
 import { UpdateConceptDto } from './dto/update-concept.dto';
-import { AuthGuard } from '@nestjs/passport';
 import { ConceptDto, FilterDto, UUIDDto } from '../models';
+import { CheckPolicies, PoliciesGuard } from '../auth/guards/policies.guard';
+import { Action, AppAbility, Subject } from '../casl/casl-ability.factory';
 
 @UseGuards(AuthGuard('jwt'))
+@ApiTags('concepts')
 @Controller('concepts')
 export class ConceptsController {
   constructor(private readonly conceptsService: ConceptsService) {}
 
   @Post()
+  @UseGuards(PoliciesGuard)
+  @CheckPolicies((ability: AppAbility) =>
+    ability.can(Action.Create, Subject.Concepts),
+  )
   create(@Body() createConceptDto: ConceptDto) {
     return this.conceptsService.create(createConceptDto);
   }
 
   @Get()
+  @UseGuards(PoliciesGuard)
+  @CheckPolicies((ability: AppAbility) =>
+    ability.can(Action.Read, Subject.Concepts),
+  )
   findAll(@Query() params: FilterDto) {
     return this.conceptsService.findAll(params);
   }
@@ -35,11 +47,19 @@ export class ConceptsController {
   }
 
   @Get(':id')
+  @UseGuards(PoliciesGuard)
+  @CheckPolicies((ability: AppAbility) =>
+    ability.can(Action.Read, Subject.Concepts),
+  )
   findOne(@Param() urlParams: UUIDDto) {
     return this.conceptsService.findOne({ id: urlParams.id });
   }
 
   @Patch(':id')
+  @UseGuards(PoliciesGuard)
+  @CheckPolicies((ability: AppAbility) =>
+    ability.can(Action.Update, Subject.Concepts),
+  )
   update(
     @Param() urlParams: UUIDDto,
     @Body() updateConceptDto: UpdateConceptDto,
@@ -52,7 +72,11 @@ export class ConceptsController {
   }
 
   @Delete('batch')
-  batchRemove(@Body() keys) {
+  @UseGuards(PoliciesGuard)
+  @CheckPolicies((ability: AppAbility) =>
+    ability.can(Action.Delete, Subject.Concepts),
+  )
+  batchRemove(@Body() keys: { key: string[] }) {
     return this.conceptsService.batchRemove(keys);
   }
 }

@@ -20,6 +20,7 @@ export enum Action {
 export enum Subject {
   Users = 'users',
   Invoices = 'invoices',
+  Concepts = 'concepts',
 }
 
 export const createAppAbility = createMongoAbility as CreateAbility<AppAbility>;

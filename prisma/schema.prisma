@@ -139,7 +139,7 @@ model Invoice {
   uinsertId     String
   uinsert       User              @relation(fields: [uinsertId], references: [id], onDelete: Restrict)
   createdAt     DateTime          @default(now())
-  Payment       Payment[]
+  payments      Payment[]
 }
 
 model InvoiceDetail {
@@ -171,6 +171,7 @@ model Concept {
   id               String            @id @default(uuid())
   name             String            @unique
   conceptType      ConceptTypeEnum   @default(CREDIT)
+  isToThirdParty   Boolean           @default(false)
   createdAt        DateTime          @default(now())
   invoiceDetails   InvoiceDetail[]
   contractConcepts ContractConcept[]

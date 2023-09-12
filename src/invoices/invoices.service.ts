@@ -1,4 +1,6 @@
 import {
+  HttpException,
+  HttpStatus,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -85,11 +87,14 @@ export class InvoicesService {
     };
   }
 
-  async findOne(
-    where: Prisma.InvoiceWhereUniqueInput,
-  ): Promise<Partial<InvoiceDto> | null> {
+  async findOne(where: Prisma.InvoiceWhereUniqueInput) {
     const invoice = await this.prismaService.invoice.findUnique({
       where,
+      include: {
+        student: true,
+        payments: true,
+        contract: true,
+      },
     });
     if (!invoice) {
       throw new NotFoundException(`Invoice with id ${where.id} not found`);
@@ -128,10 +133,46 @@ export class InvoicesService {
 
   async remove(where: Prisma.InvoiceWhereUniqueInput) {
     try {
+      const invoice = await this.findOne(where);
+
+      const { id, payments, contract, status } = invoice;
+      if (payments.length > 0 || contract) {
+        throw new HttpException(
+          `The Invoice with id ${id}, has associated information and cannot be deleted.`,
+          HttpStatus.PRECONDITION_FAILED,
+        );
+      }
+
+      const validStatuses: InvoiceStatusEnum[] = [
+        InvoiceStatusEnum.DRAFT,
+        InvoiceStatusEnum.PENDING,
+      ];
+
+      if (!validStatuses.includes(status as InvoiceStatusEnum)) {
+        throw new HttpException(
+          `Cannot delete invoice with id ${id}. The invoice status (${status}) is not valid for deletion.`,
+          HttpStatus.PRECONDITION_FAILED,
+        );
+      }
       const invoiceType = await this.prismaService.invoice.delete({ where });
       return invoiceType;
     } catch (error) {
-      throw new NotFoundException(`Device with id ${where.id} not found`);
+      throw new NotFoundException(`Invoice with id ${where.id} not found`);
+    }
+  }
+
+  async batchRemove({ key }: { key: string[] }) {
+    try {
+      return await this.prismaService.$transaction(async (prisma) => {
+        await key.reduce(async (antPromise, item) => {
+          await antPromise;
+
+          await this.remove({ id: item });
+        }, Promise.resolve());
+      });
+    } catch (err) {
+      console.log('Delete Borrowers transaction failed');
+      throw new HttpException(err, HttpStatus.BAD_REQUEST);
     }
   }
 }
