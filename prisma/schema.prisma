@@ -172,7 +172,7 @@ model Concept {
   name             String            @unique
   conceptType      ConceptTypeEnum   @default(CREDIT)
   createdAt        DateTime          @default(now())
-  InvoiceDetail    InvoiceDetail[]
+  invoiceDetails   InvoiceDetail[]
   contractConcepts ContractConcept[]
 }
 
