@@ -111,6 +111,7 @@ export class ConceptsService {
         id: true,
         name: true,
         conceptType: true,
+        isToThirdParty: true,
       },
     };
 
