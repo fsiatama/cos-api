@@ -18,4 +18,9 @@ export class ConceptDto {
   @IsBoolean()
   @ApiProperty()
   readonly isToThirdParty!: boolean;
+
+  @IsDefined()
+  @IsBoolean()
+  @ApiProperty()
+  readonly isPercentage!: boolean;
 }

@@ -112,6 +112,7 @@ export class ConceptsService {
         name: true,
         conceptType: true,
         isToThirdParty: true,
+        isPercentage: true,
       },
     };
 

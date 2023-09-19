@@ -15,17 +15,20 @@ datasource db {
 }
 
 model User {
-  id               String            @id @default(uuid())
-  email            String            @unique
-  password         String
-  name             String
-  roles            UserRole[]
-  additionalInfo   Json?             @db.Json
-  student          Student?
-  terms            Term[]
-  invoices         Invoice[]
-  contracts        Contract[]
-  contractConcepts ContractConcept[]
+  id                  String                @id @default(uuid())
+  email               String                @unique
+  password            String
+  name                String
+  roles               UserRole[]
+  additionalInfo      Json?                 @db.Json
+  student             Student?
+  terms               Term[]
+  invoices            Invoice[]
+  contracts           Contract[]
+  contractConcepts    ContractConcept[]
+  ConceptPriceHistory ConceptPriceHistory[]
+  Subconcept          Subconcept[]
+  Transaction         Transaction[]
 }
 
 model Role {
@@ -140,6 +143,7 @@ model Invoice {
   uinsert       User              @relation(fields: [uinsertId], references: [id], onDelete: Restrict)
   createdAt     DateTime          @default(now())
   payments      Payment[]
+  Transaction   Transaction[]
 }
 
 model InvoiceDetail {
@@ -168,13 +172,51 @@ model Payment {
 }
 
 model Concept {
-  id               String            @id @default(uuid())
-  name             String            @unique
-  conceptType      ConceptTypeEnum   @default(CREDIT)
-  isToThirdParty   Boolean           @default(false)
-  createdAt        DateTime          @default(now())
-  invoiceDetails   InvoiceDetail[]
-  contractConcepts ContractConcept[]
+  id                  String                @id @default(uuid())
+  name                String                @unique
+  conceptType         ConceptTypeEnum       @default(CREDIT)
+  isToThirdParty      Boolean               @default(false)
+  isPercentage        Boolean               @default(false)
+  createdAt           DateTime              @default(now())
+  invoiceDetails      InvoiceDetail[]
+  contractConcepts    ContractConcept[]
+  subconcepts         Subconcept[]
+  conceptPriceHistory ConceptPriceHistory[]
+  transactions        Transaction[]
+}
+
+model Subconcept {
+  id        String   @id @default(uuid())
+  conceptId String
+  concept   Concept  @relation(fields: [conceptId], references: [id])
+  amount    Float
+  createdAt DateTime @default(now())
+  uinsertId String
+  uinsert   User     @relation(fields: [uinsertId], references: [id], onDelete: Restrict)
+}
+
+model ConceptPriceHistory {
+  id            String   @id @default(uuid())
+  conceptId     String
+  concept       Concept  @relation(fields: [conceptId], references: [id])
+  price         Float
+  effectiveDate DateTime
+  createdAt     DateTime @default(now())
+  uinsertId     String
+  uinsert       User     @relation(fields: [uinsertId], references: [id], onDelete: Restrict)
+}
+
+model Transaction {
+  id              String   @id @default(uuid())
+  invoiceId       String
+  invoice         Invoice  @relation(fields: [invoiceId], references: [id])
+  conceptId       String
+  concept         Concept  @relation(fields: [conceptId], references: [id])
+  amount          Float
+  transactionDate DateTime
+  createdAt       DateTime @default(now())
+  uinsertId       String
+  uinsert         User     @relation(fields: [uinsertId], references: [id], onDelete: Restrict)
 }
 
 enum SemesterEnum {
