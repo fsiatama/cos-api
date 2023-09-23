@@ -34,8 +34,8 @@ export class InvoiceDto {
 
   @IsNotEmpty()
   @IsUUID()
-  @ApiProperty({ description: 'ID of the student or applicant' })
-  readonly studentId: string;
+  @ApiProperty({ description: 'ID of the applicant or applicant' })
+  readonly applicantId: string;
 
   @IsOptional()
   @IsUUID()

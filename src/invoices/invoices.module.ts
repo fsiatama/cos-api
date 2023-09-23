@@ -3,10 +3,10 @@ import { InvoicesService } from './invoices.service';
 import { InvoicesController } from './invoices.controller';
 import { PrismaModule } from '../database/prisma.module';
 import { CaslModule } from '../casl/casl.module';
-import { StudentsModule } from 'src/students/students.module';
+import { ApplicantsModule } from '../applicants/applicants.module';
 
 @Module({
-  imports: [PrismaModule, CaslModule, StudentsModule],
+  imports: [PrismaModule, CaslModule, ApplicantsModule],
   controllers: [InvoicesController],
   providers: [InvoicesService],
 })

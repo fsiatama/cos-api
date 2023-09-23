@@ -45,7 +45,8 @@ export class ConceptsService {
       //await this.validateReferences(params, ' ');
 
       // const { name } = params;
-      const data: Prisma.ConceptCreateInput = params;
+      const { subconcepts, ...others } = params;
+      const data: Prisma.ConceptCreateInput = others;
 
       return this.prismaService.concept.create({ data });
     } catch (error) {
@@ -113,6 +114,12 @@ export class ConceptsService {
         conceptType: true,
         isToThirdParty: true,
         isPercentage: true,
+        subconcepts: {
+          select: {
+            concept: true,
+            amount: true,
+          },
+        },
       },
     };
 
@@ -147,7 +154,6 @@ export class ConceptsService {
       where,
       include: {
         invoiceDetails: true,
-        contractConcepts: true,
       },
     });
 
@@ -165,17 +171,14 @@ export class ConceptsService {
       const { data, where } = params;
       const concept = await this.findOne(where);
 
-      if (
-        concept.invoiceDetails.length > 0 ||
-        concept.contractConcepts.length > 0
-      ) {
+      if (concept.invoiceDetails.length > 0) {
         throw new HttpException(
           `The borrower : ${concept.name}, has associated information and cannot be updated.`,
           HttpStatus.PRECONDITION_FAILED,
         );
       }
 
-      const newData = { ...data };
+      const { subconcepts, ...newData } = data;
 
       await this.validateReferences(newData, where.id);
 
@@ -202,10 +205,7 @@ export class ConceptsService {
         await key.reduce(async (antPromise, item) => {
           await antPromise;
           const concept = await this.findOne({ id: item });
-          if (
-            concept.invoiceDetails.length > 0 ||
-            concept.contractConcepts.length > 0
-          ) {
+          if (concept.invoiceDetails.length > 0) {
             throw new HttpException(
               {
                 status: HttpStatus.PRECONDITION_FAILED,

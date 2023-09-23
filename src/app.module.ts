@@ -8,7 +8,7 @@ import { UsersModule } from './users/users.module';
 import { PermissionsModule } from './permissions/permissions.module';
 import { CaslModule } from './casl/casl.module';
 import { InvoicesModule } from './invoices/invoices.module';
-import { StudentsModule } from './students/students.module';
+import { ApplicantsModule } from './applicants/applicants.module';
 import { InvoiceDetailsModule } from './invoice-details/invoice-details.module';
 import { ConceptsModule } from './concepts/concepts.module';
 import configuration from './config/configuration';
@@ -25,7 +25,7 @@ import configuration from './config/configuration';
     PermissionsModule,
     CaslModule,
     InvoicesModule,
-    StudentsModule,
+    ApplicantsModule,
     ConceptsModule,
     InvoiceDetailsModule,
   ],

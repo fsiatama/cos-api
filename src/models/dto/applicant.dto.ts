@@ -2,7 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import { IsString, IsEmail, IsNotEmpty } from 'class-validator';
 
-export class StudentDto {
+export class ApplicantDto {
   @IsString()
   @IsNotEmpty()
   @IsEmail()

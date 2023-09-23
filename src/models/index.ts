@@ -1,5 +1,5 @@
 export { InvoiceDto } from './dto/invoice.dto';
-export { StudentDto } from './dto/student.dto';
+export { ApplicantDto } from './dto/applicant.dto';
 export { UserDto } from './dto/user.dto';
 export { ConceptDto } from './dto/concept.dto';
 export { FilterDto, UUIDDto } from './dto/filter.dto';

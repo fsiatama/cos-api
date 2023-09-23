@@ -10,7 +10,7 @@ generator erd {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "cockroachdb"
   url      = env("DATABASE_URL")
 }
 
@@ -20,15 +20,12 @@ model User {
   password            String
   name                String
   roles               UserRole[]
-  additionalInfo      Json?                 @db.Json
-  student             Student?
-  terms               Term[]
+  additionalInfo      Json?
+  applicant           Applicant?
   invoices            Invoice[]
-  contracts           Contract[]
-  contractConcepts    ContractConcept[]
-  ConceptPriceHistory ConceptPriceHistory[]
-  Subconcept          Subconcept[]
-  Transaction         Transaction[]
+  conceptPriceHistory ConceptPriceHistory[]
+  subconcepts         Subconcept[]
+  transactions        Transaction[]
 }
 
 model Role {
@@ -78,55 +75,11 @@ model RolePermission {
   @@id([roleId, permissionId])
 }
 
-model Student {
-  id        String     @id @default(uuid())
-  userId    String     @unique
-  user      User       @relation(fields: [userId], references: [id])
-  contracts Contract[]
-  invoices  Invoice[]
-}
-
-model Contract {
-  id               String            @id @default(uuid())
-  studentId        String
-  student          Student           @relation(fields: [studentId], references: [id])
-  year             Int
-  semester         SemesterEnum
-  terms            Term[]
-  contractConcepts ContractConcept[]
-  invoices         Invoice[]
-  uinsert          User              @relation(fields: [uinsertId], references: [id], onDelete: Restrict)
-  uinsertId        String
-  createdAt        DateTime          @default(now())
-
-  @@unique([studentId, year, semester])
-}
-
-model Term {
-  id               String   @id @default(uuid())
-  months           Int
-  monthlyRate      Float
-  latePaymentFee   Float
-  beginToApplyDate DateTime
-  paymentDay       Int
-  contractId       String
-  contract         Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
-  uinsert          User     @relation(fields: [uinsertId], references: [id], onDelete: Restrict)
-  uinsertId        String
-  createdAt        DateTime @default(now())
-}
-
-model ContractConcept {
-  id          String   @id @default(uuid())
-  amount      Float
-  description String?
-  contractId  String
-  contract    Contract @relation(fields: [contractId], references: [id])
-  conceptId   String
-  concept     Concept  @relation(fields: [conceptId], references: [id])
-  uinsert     User     @relation(fields: [uinsertId], references: [id], onDelete: Restrict)
-  uinsertId   String
-  createdAt   DateTime @default(now())
+model Applicant {
+  id       String    @id @default(uuid())
+  userId   String    @unique
+  user     User      @relation(fields: [userId], references: [id])
+  invoices Invoice[]
 }
 
 model Invoice {
@@ -135,15 +88,13 @@ model Invoice {
   invoiceDate   DateTime          @default(now())
   status        InvoiceStatusEnum
   invoiceDetail InvoiceDetail[]
-  studentId     String
-  student       Student           @relation(fields: [studentId], references: [id])
-  contractId    String?
-  contract      Contract?         @relation(fields: [contractId], references: [id])
+  applicantId   String
+  applicant     Applicant         @relation(fields: [applicantId], references: [id])
   uinsertId     String
   uinsert       User              @relation(fields: [uinsertId], references: [id], onDelete: Restrict)
   createdAt     DateTime          @default(now())
   payments      Payment[]
-  Transaction   Transaction[]
+  transactions  Transaction[]
 }
 
 model InvoiceDetail {
@@ -179,7 +130,6 @@ model Concept {
   isPercentage        Boolean               @default(false)
   createdAt           DateTime              @default(now())
   invoiceDetails      InvoiceDetail[]
-  contractConcepts    ContractConcept[]
   subconcepts         Subconcept[]
   conceptPriceHistory ConceptPriceHistory[]
   transactions        Transaction[]

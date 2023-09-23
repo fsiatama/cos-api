@@ -1,7 +1,17 @@
-import { IsString, IsDefined, IsIn, IsBoolean } from 'class-validator';
-import { getEnumValues } from '../helpers';
+import {
+  IsString,
+  IsDefined,
+  IsIn,
+  IsBoolean,
+  IsArray,
+  ValidateNested,
+  IsOptional,
+} from 'class-validator';
+import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 import { ConceptTypeEnum } from '@prisma/client';
+import { getEnumValues } from '../helpers';
+import { SubconceptDto } from './subconcept.dto';
 
 export class ConceptDto {
   @IsDefined()
@@ -23,4 +33,11 @@ export class ConceptDto {
   @IsBoolean()
   @ApiProperty()
   readonly isPercentage!: boolean;
+
+  @IsArray()
+  @IsOptional()
+  @ValidateNested({ each: true })
+  @Type(() => SubconceptDto)
+  @ApiProperty({ type: () => SubconceptDto })
+  readonly subconcepts?: Partial<SubconceptDto[]>;
 }

@@ -9,13 +9,13 @@ import { Invoice, InvoiceStatusEnum, Prisma } from '@prisma/client';
 import { UpdateInvoiceDto } from './dto/update-invoice.dto';
 import { FilterDto, InvoiceDto, PaginationArgs, ResponseDto } from '../models';
 import { PrismaService } from '../database/prisma.service';
-import { StudentsService } from '../students/students.service';
+import { ApplicantsService } from '../applicants/applicants.service';
 
 @Injectable()
 export class InvoicesService {
   constructor(
     private prismaService: PrismaService,
-    private readonly studentService: StudentsService,
+    private readonly applicantService: ApplicantsService,
   ) {}
 
   async create(
@@ -23,9 +23,9 @@ export class InvoicesService {
     createdBy: string,
   ): Promise<Partial<Invoice>> {
     try {
-      const { studentId, status, ...rest } = createInvoiceDto;
-      await this.studentService.findOne({
-        id: studentId,
+      const { applicantId, status, ...rest } = createInvoiceDto;
+      await this.applicantService.findOne({
+        id: applicantId,
       });
 
       const defaultStatus = status || InvoiceStatusEnum.DRAFT;
@@ -33,7 +33,7 @@ export class InvoicesService {
       const data: Prisma.InvoiceCreateInput = {
         ...rest,
         status: defaultStatus,
-        student: { connect: { id: studentId } },
+        applicant: { connect: { id: applicantId } },
         uinsert: { connect: { id: createdBy } },
       };
       return this.prismaService.invoice.create({ data });
@@ -62,7 +62,7 @@ export class InvoicesService {
         invoiceNumber: true,
         invoiceDetail: true,
         status: true,
-        student: {
+        applicant: {
           select: {
             id: true,
             user: {
@@ -91,9 +91,8 @@ export class InvoicesService {
     const invoice = await this.prismaService.invoice.findUnique({
       where,
       include: {
-        student: true,
+        applicant: true,
         payments: true,
-        contract: true,
       },
     });
     if (!invoice) {
@@ -107,19 +106,19 @@ export class InvoicesService {
     data: UpdateInvoiceDto;
   }): Promise<Invoice> {
     const { data, where } = params;
-    const { id, studentId, ...rest } = data;
+    const { id, applicantId, ...rest } = data;
 
     try {
       await this.findOne(where);
       const updateData: Prisma.InvoiceUpdateInput = {
         ...rest,
       };
-      if (studentId) {
-        await this.studentService.findOne({
-          id: studentId,
+      if (applicantId) {
+        await this.applicantService.findOne({
+          id: applicantId,
         });
       }
-      updateData.student = { connect: { id: studentId } };
+      updateData.applicant = { connect: { id: applicantId } };
       return await this.prismaService.invoice.update({
         where,
         data: updateData,
@@ -135,8 +134,8 @@ export class InvoicesService {
     try {
       const invoice = await this.findOne(where);
 
-      const { id, payments, contract, status } = invoice;
-      if (payments.length > 0 || contract) {
+      const { id, payments, status } = invoice;
+      if (payments.length > 0) {
         throw new HttpException(
           `The Invoice with id ${id}, has associated information and cannot be deleted.`,
           HttpStatus.PRECONDITION_FAILED,
