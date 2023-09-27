@@ -40,15 +40,36 @@ export class ConceptsService {
     });
   }
 
-  async create(params: ConceptDto): Promise<Concept> {
+  async create(params: ConceptDto, createdBy: string): Promise<Concept> {
     try {
-      //await this.validateReferences(params, ' ');
-
-      // const { name } = params;
       const { subconcepts, ...others } = params;
       const data: Prisma.ConceptCreateInput = others;
+      return await this.prismaService.$transaction(async (prisma) => {
+        const createdConcept = await prisma.concept.create({
+          data,
+        });
 
-      return this.prismaService.concept.create({ data });
+        const prismaSubconcepts: Prisma.SubconceptCreateManyInput[] = [];
+        if (subconcepts) {
+          for (const subconcept of subconcepts) {
+            const originConcept = await this.findOne({
+              id: subconcept.concept.id,
+            });
+            prismaSubconcepts.push({
+              parentId: createdConcept.id,
+              amount: subconcept.amount,
+              uinsertId: createdBy,
+              childId: originConcept.id,
+            });
+          }
+        }
+
+        await prisma.subconcept.createMany({
+          data: prismaSubconcepts,
+        });
+
+        return createdConcept;
+      });
     } catch (error) {
       throw error;
     }

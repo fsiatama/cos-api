@@ -10,7 +10,7 @@ generator erd {
 }
 
 datasource db {
-  provider = "cockroachdb"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -130,19 +130,22 @@ model Concept {
   isPercentage        Boolean               @default(false)
   createdAt           DateTime              @default(now())
   invoiceDetails      InvoiceDetail[]
-  subconcepts         Subconcept[]
   conceptPriceHistory ConceptPriceHistory[]
   transactions        Transaction[]
+  subconcepts         Subconcept[]          @relation("ChildConcept")
+  parentConcepts      Subconcept[]          @relation("ParentConcept")
 }
 
 model Subconcept {
-  id        String   @id @default(uuid())
-  conceptId String
-  concept   Concept  @relation(fields: [conceptId], references: [id])
-  amount    Float
-  createdAt DateTime @default(now())
-  uinsertId String
-  uinsert   User     @relation(fields: [uinsertId], references: [id], onDelete: Restrict)
+  id            String   @id @default(uuid())
+  parentId      String
+  childId       String
+  parentConcept Concept  @relation("ChildConcept", fields: [parentId], references: [id])
+  concept       Concept  @relation("ParentConcept", fields: [childId], references: [id])
+  amount        Float
+  createdAt     DateTime @default(now())
+  uinsertId     String
+  uinsert       User     @relation(fields: [uinsertId], references: [id], onDelete: Restrict)
 }
 
 model ConceptPriceHistory {

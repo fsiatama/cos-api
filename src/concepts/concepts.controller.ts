@@ -8,9 +8,11 @@ import {
   Delete,
   UseGuards,
   Query,
+  Request,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiTags } from '@nestjs/swagger';
+import { User } from '@prisma/client';
 import { ConceptsService } from './concepts.service';
 import { UpdateConceptDto } from './dto/update-concept.dto';
 import { ConceptDto, FilterDto, UUIDDto } from '../models';
@@ -28,8 +30,10 @@ export class ConceptsController {
   @CheckPolicies((ability: AppAbility) =>
     ability.can(Action.Create, Subject.Concepts),
   )
-  create(@Body() createConceptDto: ConceptDto) {
-    return this.conceptsService.create(createConceptDto);
+  create(@Body() createConceptDto: ConceptDto, @Request() req) {
+    const { sub } = req.user;
+
+    return this.conceptsService.create(createConceptDto, sub);
   }
 
   @Get()
