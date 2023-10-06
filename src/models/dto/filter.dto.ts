@@ -1,3 +1,4 @@
+import { Transform } from 'class-transformer';
 import { IsOptional, IsPositive, IsString, IsUUID, Min } from 'class-validator';
 
 export class FilterDto {
@@ -10,6 +11,7 @@ export class FilterDto {
   readonly current: number;
 
   @IsOptional()
+  @Transform(({ value }) => value.toLowerCase())
   @IsString()
   readonly name: string;
 

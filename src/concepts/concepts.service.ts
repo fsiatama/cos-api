@@ -150,6 +150,7 @@ export class ConceptsService {
           {
             name: {
               contains: `${name}`,
+              mode: 'insensitive',
             },
           },
         ],

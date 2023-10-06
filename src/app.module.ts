@@ -11,6 +11,7 @@ import { InvoicesModule } from './invoices/invoices.module';
 import { ApplicantsModule } from './applicants/applicants.module';
 import { InvoiceDetailsModule } from './invoice-details/invoice-details.module';
 import { ConceptsModule } from './concepts/concepts.module';
+import { ConceptPriceHistoryModule } from './concept-price-history/concept-price-history.module';
 import configuration from './config/configuration';
 
 @Module({
@@ -28,6 +29,7 @@ import configuration from './config/configuration';
     ApplicantsModule,
     ConceptsModule,
     InvoiceDetailsModule,
+    ConceptPriceHistoryModule,
   ],
   controllers: [AppController],
   providers: [AppService],

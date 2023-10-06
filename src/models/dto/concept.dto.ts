@@ -7,7 +7,7 @@ import {
   ValidateNested,
   IsOptional,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 import { ConceptTypeEnum } from '@prisma/client';
 import { getEnumValues } from '../helpers';
@@ -16,6 +16,7 @@ import { SubconceptDto } from './subconcept.dto';
 export class ConceptDto {
   @IsDefined()
   @IsString()
+  @Transform(({ value }) => value.toLowerCase())
   @ApiProperty()
   readonly name!: string;
 
