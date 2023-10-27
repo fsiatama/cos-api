@@ -11,13 +11,13 @@ import {
   Query,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { User } from '@prisma/client';
 import { ApiTags } from '@nestjs/swagger';
 import { InvoicesService } from './invoices.service';
 import { UpdateInvoiceDto } from './dto/update-invoice.dto';
-import { FilterDto, InvoiceDto, UUIDDto } from '../models';
+import { InvoiceDto, UUIDDto } from '../models';
 import { CheckPolicies, PoliciesGuard } from '../auth/guards/policies.guard';
 import { Action, AppAbility, Subject } from '../casl/casl-ability.factory';
+import { FilterInvoicesDto } from './dto/filter-invoices-dto';
 
 @UseGuards(AuthGuard('jwt'))
 @ApiTags('invoices')
@@ -30,9 +30,9 @@ export class InvoicesController {
   @CheckPolicies((ability: AppAbility) =>
     ability.can(Action.Create, Subject.Invoices),
   )
-  create(@Body() createInvoiceDto: InvoiceDto, @Request() req: { user: User }) {
-    const userId = req.user.id;
-    return this.invoicesService.create(createInvoiceDto, userId);
+  create(@Body() createInvoiceDto: InvoiceDto, @Request() req) {
+    const { sub } = req.user;
+    return this.invoicesService.create(createInvoiceDto, sub);
   }
 
   @Get()
@@ -40,7 +40,7 @@ export class InvoicesController {
   @CheckPolicies((ability: AppAbility) =>
     ability.can(Action.Read, Subject.Invoices),
   )
-  findAll(@Query() params: FilterDto) {
+  findAll(@Query() params: FilterInvoicesDto) {
     return this.invoicesService.findAll(params);
   }
 

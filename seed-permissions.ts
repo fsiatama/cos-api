@@ -1,5 +1,4 @@
 import { PrismaClient } from '@prisma/client';
-import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
@@ -24,13 +23,39 @@ async function main() {
     },
   });
 
+  const manageConceptPriceHistory = await prisma.permission.create({
+    data: {
+      action: 'manage',
+      subject: 'concept-prices',
+      title: 'Concept Prices',
+      icon: 'invoices-icon',
+      route: '/concept-prices',
+    },
+  });
+
+  const manageApplicant = await prisma.permission.create({
+    data: {
+      action: 'manage',
+      subject: 'applicants',
+      title: 'Applicants',
+      icon: 'invoices-icon',
+      route: '/applicants',
+    },
+  });
+
   const adminRole = await prisma.role.findFirst({
     where: {
       name: 'ADMIN',
     },
   });
 
+  const applicantRole = await prisma.role.findFirst({
+    where: {
+      name: 'APPLICANT',
+    },
+  });
   // Conectar roles a permisos usando la tabla RolePermission
+
   await prisma.rolePermission.create({
     data: {
       roleId: adminRole.id,
@@ -42,6 +67,20 @@ async function main() {
     data: {
       roleId: adminRole.id,
       permissionId: manageInvoices.id,
+    },
+  });
+
+  await prisma.rolePermission.create({
+    data: {
+      roleId: adminRole.id,
+      permissionId: manageConceptPriceHistory.id,
+    },
+  });
+
+  await prisma.rolePermission.create({
+    data: {
+      roleId: adminRole.id,
+      permissionId: manageApplicant.id,
     },
   });
 }

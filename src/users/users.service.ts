@@ -45,7 +45,7 @@ export class UsersService {
       });
 
       if (roles && roles.length > 0) {
-        for (const roleId of params.roles) {
+        for (const roleId of roles) {
           await this.prismaService.userRole.create({
             data: {
               userId: user.id,

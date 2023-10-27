@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { InvoiceStatusEnum } from '@prisma/client';
+import { InvoiceStatusEnum, Prisma } from '@prisma/client';
+import { Type } from 'class-transformer';
 import {
   IsString,
   IsNotEmpty,
@@ -7,17 +8,25 @@ import {
   IsOptional,
   IsDate,
   IsEnum,
+  IsNotEmptyObject,
+  IsObject,
+  ValidateNested,
+  IsArray,
+  IsCurrency,
+  IsNumber,
 } from 'class-validator';
+import { UUIDDto } from './filter.dto';
+import { InvoiceDetailDto } from './invoice-detail.dto';
 
 export class InvoiceDto {
   @IsOptional()
   @IsUUID()
   id?: string;
 
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
   @ApiProperty({ description: 'Invoice number' })
-  readonly invoiceNumber: string;
+  readonly invoiceNumber?: string;
 
   @IsNotEmpty()
   @IsDate()
@@ -32,13 +41,64 @@ export class InvoiceDto {
   })
   readonly status?: InvoiceStatusEnum;
 
-  @IsNotEmpty()
-  @IsUUID()
-  @ApiProperty({ description: 'ID of the applicant or applicant' })
-  readonly applicantId: string;
+  @IsOptional()
+  @IsNumber()
+  totalAmount?: number;
+
+  @IsNotEmptyObject()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => UUIDDto)
+  @ApiProperty({ type: () => UUIDDto })
+  readonly applicant: UUIDDto;
 
   @IsOptional()
   @IsUUID()
   @ApiProperty({ description: 'ID of the contract', nullable: true })
   readonly contractId?: string;
+
+  @IsArray()
+  @IsNotEmpty()
+  @ValidateNested({ each: true })
+  @Type(() => InvoiceDetailDto)
+  @ApiProperty({ type: () => InvoiceDetailDto })
+  readonly invoiceDetail: InvoiceDetailDto[];
+}
+
+const invoiceWithDetails = Prisma.validator<Prisma.InvoiceDefaultArgs>()({
+  select: {
+    id: true,
+    invoiceDate: true,
+    invoiceNumber: true,
+    invoiceDetail: {
+      select: {
+        amount: true,
+        qty: true,
+        conceptPrice: {
+          select: {
+            concept: {
+              select: {
+                conceptType: true,
+              },
+            },
+          },
+        },
+      },
+    },
+    status: true,
+    applicant: {
+      select: {
+        id: true,
+        user: {
+          select: { name: true, email: true },
+        },
+      },
+    },
+  },
+});
+
+type InvoiceGetPayload = Prisma.InvoiceGetPayload<typeof invoiceWithDetails>;
+
+export interface InvoiceWithDetails extends InvoiceGetPayload {
+  totalAmount: number;
 }

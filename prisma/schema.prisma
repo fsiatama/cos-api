@@ -76,10 +76,11 @@ model RolePermission {
 }
 
 model Applicant {
-  id       String    @id @default(uuid())
-  userId   String    @unique
-  user     User      @relation(fields: [userId], references: [id])
-  invoices Invoice[]
+  id        String    @id @default(uuid())
+  userId    String    @unique
+  user      User      @relation(fields: [userId], references: [id])
+  invoices  Invoice[]
+  createdAt DateTime  @default(now())
 }
 
 model Invoice {
@@ -98,13 +99,14 @@ model Invoice {
 }
 
 model InvoiceDetail {
-  id          String  @id @default(uuid())
-  invoiceId   String
-  invoice     Invoice @relation(fields: [invoiceId], references: [id])
-  amount      Float
-  description String?
-  conceptId   String
-  concept     Concept @relation(fields: [conceptId], references: [id])
+  id             String              @id @default(uuid())
+  invoiceId      String
+  invoice        Invoice             @relation(fields: [invoiceId], references: [id])
+  amount         Float
+  qty            Float
+  description    String?
+  conceptPriceId String
+  conceptPrice   ConceptPriceHistory @relation(fields: [conceptPriceId], references: [id])
 }
 
 model PaymentMethod {
@@ -128,8 +130,8 @@ model Concept {
   conceptType         ConceptTypeEnum       @default(CREDIT)
   isToThirdParty      Boolean               @default(false)
   isPercentage        Boolean               @default(false)
+  isChild             Boolean               @default(false)
   createdAt           DateTime              @default(now())
-  invoiceDetails      InvoiceDetail[]
   conceptPriceHistory ConceptPriceHistory[]
   transactions        Transaction[]
   subconcepts         Subconcept[]          @relation("ChildConcept")
@@ -146,17 +148,20 @@ model Subconcept {
   createdAt     DateTime @default(now())
   uinsertId     String
   uinsert       User     @relation(fields: [uinsertId], references: [id], onDelete: Restrict)
+
+  @@unique([parentId, childId])
 }
 
 model ConceptPriceHistory {
-  id            String   @id @default(uuid())
-  conceptId     String
-  concept       Concept  @relation(fields: [conceptId], references: [id])
-  price         Float
-  effectiveDate DateTime
-  createdAt     DateTime @default(now())
-  uinsertId     String
-  uinsert       User     @relation(fields: [uinsertId], references: [id], onDelete: Restrict)
+  id             String          @id @default(uuid())
+  conceptId      String
+  concept        Concept         @relation(fields: [conceptId], references: [id])
+  price          Float
+  effectiveDate  DateTime
+  createdAt      DateTime        @default(now())
+  uinsertId      String
+  uinsert        User            @relation(fields: [uinsertId], references: [id], onDelete: Restrict)
+  invoiceDetails InvoiceDetail[]
 }
 
 model Transaction {

@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { Prisma } from '@prisma/client';
 import {
   IsString,
   IsNotEmpty,
@@ -9,7 +10,7 @@ import {
 
 export class InvoiceDetailDto {
   @IsOptional()
-  @IsUUID()
+  @IsString()
   @ApiProperty({ description: 'Unique UUID for the invoice detail' })
   id?: string;
 
@@ -20,13 +21,18 @@ export class InvoiceDetailDto {
 
   @IsNotEmpty()
   @IsNumber()
-  @ApiProperty({ description: 'Amount of the invoice detail' })
-  readonly amount: number;
+  @ApiProperty({ description: 'Quantity of the invoice detail' })
+  readonly qty: number;
 
-  @IsNotEmpty()
-  @IsUUID()
-  @ApiProperty({ description: 'ID of the associated invoice' })
-  readonly invoiceId: string;
+  @IsOptional()
+  @IsNumber()
+  @ApiProperty({ description: 'price of the concept' })
+  readonly amount?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @ApiProperty({ description: 'qty * amount' })
+  readonly subtotal?: number;
 
   @IsNotEmpty()
   @IsUUID()
@@ -35,3 +41,24 @@ export class InvoiceDetailDto {
   })
   readonly conceptId: string;
 }
+
+const invoiceDetailWithConceptPrice =
+  Prisma.validator<Prisma.InvoiceDetailDefaultArgs>()({
+    select: {
+      amount: true,
+      qty: true,
+      conceptPrice: {
+        select: {
+          concept: {
+            select: {
+              conceptType: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+export type InvoiceDetailGetPayload = Prisma.InvoiceDetailGetPayload<
+  typeof invoiceDetailWithConceptPrice
+>;

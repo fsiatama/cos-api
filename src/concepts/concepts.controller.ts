@@ -12,7 +12,6 @@ import {
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiTags } from '@nestjs/swagger';
-import { User } from '@prisma/client';
 import { ConceptsService } from './concepts.service';
 import { UpdateConceptDto } from './dto/update-concept.dto';
 import { ConceptDto, FilterDto, UUIDDto } from '../models';
@@ -45,9 +44,14 @@ export class ConceptsController {
     return this.conceptsService.findAll(params);
   }
 
-  @Get('names')
-  findAllNames(@Query() params: FilterDto) {
-    return this.conceptsService.findAllNames(params);
+  @Get('childs')
+  findChildsNames(@Query() params: FilterDto) {
+    return this.conceptsService.findChildsNames(params);
+  }
+
+  @Get('parents')
+  findParentsNames(@Query() params: FilterDto) {
+    return this.conceptsService.findParentsNames(params);
   }
 
   @Get(':id')
@@ -67,12 +71,14 @@ export class ConceptsController {
   update(
     @Param() urlParams: UUIDDto,
     @Body() updateConceptDto: UpdateConceptDto,
+    @Request() req,
   ) {
     const params = {
       where: { id: urlParams.id },
       data: updateConceptDto,
     };
-    return this.conceptsService.update(params);
+    const { sub } = req.user;
+    return this.conceptsService.update(params, sub);
   }
 
   @Delete('batch')

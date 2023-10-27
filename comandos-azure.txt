@@ -1,0 +1,19 @@
+$RESOURCE_GROUP="a1-cos-containerapps"
+$LOCATION="eastus"
+$ENVIRONMENT="env-a1-cos-containerapps"
+$API_NAME="a1-cos-api"
+$FRONTEND_NAME="a1-cos-ui"
+$ACR_NAME="a1cosappcontainersacr"
+$JWT_SECRET="super-secret"
+$COS_API_PORT=3000
+$DATABASE_URL="postgresql://db_a691be_cos_usr:bFZaD8GruvstLH-_MmJ2A@cos-db.postgres.database.azure.com:5432/cos"
+
+az containerapp create --name $API_NAME --resource-group $RESOURCE_GROUP --environment $ENVIRONMENT --image "$ACR_NAME.azurecr.io/$API_NAME" --target-port 3000 --ingress 'internal' --registry-server "$ACR_NAME.azurecr.io" --query properties.configuration.ingress.fqdn --env-vars "JWT_SECRET=$JWT_SECRET"  "COS_API_PORT=$COS_API_PORT" "DATABASE_URL=$DATABASE_URL"
+
+$API_BASE_URL=$(az containerapp show --resource-group $RESOURCE_GROUP --name $API_NAME --query properties.configuration.ingress.fqdn -o tsv)
+
+az containerapp create --name $FRONTEND_NAME --resource-group $RESOURCE_GROUP --environment $ENVIRONMENT --image "$ACR_NAME.azurecr.io/$FRONTEND_NAME" --target-port 3000 --env-vars "API_BASE_URL=https://$API_BASE_URL" --ingress 'external' --registry-server "$ACR_NAME.azurecr.io" --query properties.configuration.ingress.fqdn
+
+az containerapp create --name "$FRONTEND_NAME" --resource-group "$RESOURCE_GROUP" --environment "$ENVIRONMENT" --image "$ACR_NAME.azurecr.io/$FRONTEND_NAME"  --target-port 80 --ingress 'external' --registry-server "$ACR_NAME.azurecr.io" --query properties.configuration.ingress.fqdn
+
+az containerapp update --name "$FRONTEND_NAME" --resource-group "$RESOURCE_GROUP" --image "$ACR_NAME.azurecr.io/$FRONTEND_NAME"

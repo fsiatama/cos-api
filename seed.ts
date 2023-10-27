@@ -4,17 +4,6 @@ import * as bcrypt from 'bcrypt';
 const prisma = new PrismaClient();
 
 async function main() {
-  // Crear permisos
-  const readDashboard = await prisma.permission.create({
-    data: {
-      action: 'read',
-      subject: 'dashboard',
-      title: 'Dashboard',
-      icon: 'dashboard-icon',
-      route: '/dashboard',
-    },
-  });
-
   const manageUsers = await prisma.permission.create({
     data: {
       action: 'manage',
@@ -22,16 +11,6 @@ async function main() {
       title: 'Users',
       icon: 'users-icon',
       route: '/users',
-    },
-  });
-
-  const viewSettings = await prisma.permission.create({
-    data: {
-      action: 'view',
-      subject: 'settings',
-      title: 'Settings',
-      icon: 'settings-icon',
-      route: '/settings',
     },
   });
 
@@ -47,12 +26,18 @@ async function main() {
     },
   });
 
+  const applicantRole = await prisma.role.create({
+    data: {
+      name: 'APPLICANT',
+    },
+  });
+
   // Crear usuarios
-  const hashPassword = await bcrypt.hash('Abc123.', 10);
+  const hashPassword = await bcrypt.hash('American.One_23', 10);
 
   const adminUser = await prisma.user.create({
     data: {
-      email: 'admin@example.com',
+      email: 'systems@americanone-esl.com',
       password: hashPassword,
       name: 'Admin',
     },
@@ -67,31 +52,11 @@ async function main() {
   });
 
   // Conectar roles a permisos usando la tabla RolePermission
-  await prisma.rolePermission.create({
-    data: {
-      roleId: adminRole.id,
-      permissionId: readDashboard.id,
-    },
-  });
-
-  await prisma.rolePermission.create({
-    data: {
-      roleId: adminRole.id,
-      permissionId: viewSettings.id,
-    },
-  });
 
   await prisma.rolePermission.create({
     data: {
       roleId: adminRole.id,
       permissionId: manageUsers.id,
-    },
-  });
-
-  await prisma.rolePermission.create({
-    data: {
-      roleId: userRole.id,
-      permissionId: readDashboard.id,
     },
   });
 

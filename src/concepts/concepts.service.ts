@@ -1,5 +1,12 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
-import { FilterDto, ConceptDto } from '../models';
+import {
+  HttpException,
+  HttpStatus,
+  Injectable,
+  NotFoundException,
+  PreconditionFailedException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
+import { FilterDto, ConceptDto, SubconceptDto } from '../models';
 import { UpdateConceptDto } from './dto/update-concept.dto';
 import { PrismaService } from '../database/prisma.service';
 import { Concept, Prisma } from '@prisma/client';
@@ -18,10 +25,7 @@ export class ConceptsService {
         id,
       });
       if (existConceptName) {
-        throw new HttpException(
-          'Concept alredy registered',
-          HttpStatus.BAD_REQUEST,
-        );
+        throw new UnprocessableEntityException('Concept alredy registered');
       }
     }
     return data;
@@ -40,6 +44,28 @@ export class ConceptsService {
     });
   }
 
+  private async getSubconceptsForCreate(
+    subconcepts: SubconceptDto[],
+    parentId: string,
+    createdBy: string,
+  ) {
+    const prismaSubconcepts: Prisma.SubconceptCreateManyInput[] = [];
+    if (subconcepts) {
+      for (const subconcept of subconcepts) {
+        const originConcept = await this.findOne({
+          id: subconcept.concept.id,
+        });
+        prismaSubconcepts.push({
+          parentId: parentId,
+          amount: subconcept.amount,
+          uinsertId: createdBy,
+          childId: originConcept.id,
+        });
+      }
+    }
+    return prismaSubconcepts;
+  }
+
   async create(params: ConceptDto, createdBy: string): Promise<Concept> {
     try {
       const { subconcepts, ...others } = params;
@@ -48,21 +74,11 @@ export class ConceptsService {
         const createdConcept = await prisma.concept.create({
           data,
         });
-
-        const prismaSubconcepts: Prisma.SubconceptCreateManyInput[] = [];
-        if (subconcepts) {
-          for (const subconcept of subconcepts) {
-            const originConcept = await this.findOne({
-              id: subconcept.concept.id,
-            });
-            prismaSubconcepts.push({
-              parentId: createdConcept.id,
-              amount: subconcept.amount,
-              uinsertId: createdBy,
-              childId: originConcept.id,
-            });
-          }
-        }
+        const prismaSubconcepts = await this.getSubconceptsForCreate(
+          subconcepts,
+          createdConcept.id,
+          createdBy,
+        );
 
         await prisma.subconcept.createMany({
           data: prismaSubconcepts,
@@ -70,13 +86,48 @@ export class ConceptsService {
 
         return createdConcept;
       });
-    } catch (error) {
-      throw error;
+    } catch (err) {
+      console.log('Create Concepts transaction failed');
+      throw new HttpException(err, HttpStatus.BAD_REQUEST);
     }
   }
 
-  async findAllNames(params?: FilterDto) {
+  async findParentsNames(params?: FilterDto) {
+    const where: Prisma.ConceptWhereInput = {
+      isChild: false,
+    };
+    return this.findAllNames(where, params);
+  }
+
+  async findChildsNames(params?: FilterDto) {
+    const where: Prisma.ConceptWhereInput = {
+      isChild: true,
+    };
+    return this.findAllNames(where, params);
+  }
+
+  private async findAllNames(
+    where: Prisma.ConceptWhereInput,
+    params?: FilterDto,
+  ) {
     const { pageSize = 20, current = 1, name } = params;
+
+    const whereInput: Prisma.ConceptWhereInput = {
+      ...where,
+      ...(name
+        ? {
+            AND: [
+              {
+                name: {
+                  contains: `${name}`,
+                },
+              },
+            ],
+          }
+        : {}),
+    };
+
+    const today = new Date();
 
     const options: {
       skip?: number;
@@ -95,22 +146,30 @@ export class ConceptsService {
         id: true,
         name: true,
         conceptType: true,
-      },
-    };
-
-    if (name) {
-      options.where = {
-        OR: [
-          {
-            name: {
-              contains: `${name}`,
+        conceptPriceHistory: {
+          select: {
+            price: true,
+          },
+          take: 1,
+          orderBy: {
+            effectiveDate: 'desc',
+          },
+          where: {
+            effectiveDate: {
+              lte: today,
             },
           },
-        ],
-      };
-    }
+        },
+      },
+      where: whereInput,
+    };
 
-    return this.prismaService.concept.findMany(options);
+    const result = await this.prismaService.concept.findMany(options);
+
+    return result.map((result) => {
+      const { conceptPriceHistory, ...rest } = result;
+      return { ...rest, ...conceptPriceHistory[0] };
+    });
   }
 
   async findAll(params?: FilterDto) {
@@ -135,10 +194,20 @@ export class ConceptsService {
         conceptType: true,
         isToThirdParty: true,
         isPercentage: true,
+        isChild: true,
         subconcepts: {
           select: {
-            concept: true,
+            concept: {
+              select: {
+                id: true,
+              },
+            },
             amount: true,
+          },
+        },
+        parentConcepts: {
+          select: {
+            concept: true,
           },
         },
       },
@@ -175,41 +244,108 @@ export class ConceptsService {
     const concept = await this.prismaService.concept.findUnique({
       where,
       include: {
-        invoiceDetails: true,
+        subconcepts: true,
+        parentConcepts: true,
+        conceptPriceHistory: {
+          include: {
+            invoiceDetails: true,
+          },
+        },
       },
     });
 
     if (!concept) {
-      throw new HttpException('Concept not found', HttpStatus.NOT_FOUND);
+      throw new NotFoundException('Concept not found');
     }
+
     return concept;
   }
 
-  async update(params: {
-    where: Prisma.ConceptWhereUniqueInput;
-    data: UpdateConceptDto;
-  }): Promise<Concept> {
+  async getCurrentPriceById(where: Prisma.ConceptWhereUniqueInput) {
+    const today = new Date();
+    const concept = await this.prismaService.concept.findUnique({
+      where,
+      select: {
+        id: true,
+        name: true,
+        conceptType: true,
+        conceptPriceHistory: {
+          select: {
+            price: true,
+            id: true,
+          },
+          take: 1,
+          orderBy: {
+            effectiveDate: 'desc',
+          },
+          where: {
+            effectiveDate: {
+              lte: today,
+            },
+          },
+        },
+      },
+    });
+
+    if (!concept) {
+      throw new NotFoundException('Concept not found');
+    }
+    const { id, conceptPriceHistory } = concept;
+
+    return {
+      id,
+      conceptPriceId: conceptPriceHistory[0].id,
+      price: conceptPriceHistory[0].price,
+    };
+  }
+
+  async update(
+    params: {
+      where: Prisma.ConceptWhereUniqueInput;
+      data: UpdateConceptDto;
+    },
+    updatedBy: string,
+  ): Promise<Concept> {
     try {
       const { data, where } = params;
       const concept = await this.findOne(where);
 
-      if (concept.invoiceDetails.length > 0) {
-        throw new HttpException(
-          `The borrower : ${concept.name}, has associated information and cannot be updated.`,
-          HttpStatus.PRECONDITION_FAILED,
+      /*if (concept.conceptPriceHistory.) {
+        throw new UnprocessableEntityException(
+          `The concept : ${concept.name}, has associated information and cannot be updated.`,
         );
-      }
+      }*/
 
       const { subconcepts, ...newData } = data;
+      return await this.prismaService.$transaction(async (prisma) => {
+        await this.validateReferences(newData, where.id);
 
-      await this.validateReferences(newData, where.id);
+        for (const originSubconcept of concept.subconcepts) {
+          await prisma.subconcept.delete({
+            where: {
+              id: originSubconcept.id,
+            },
+          });
+        }
 
-      return this.prismaService.concept.update({
-        data: newData,
-        where,
+        const prismaSubconcepts = await this.getSubconceptsForCreate(
+          subconcepts,
+          concept.id,
+          updatedBy,
+        );
+
+        await prisma.subconcept.createMany({
+          data: prismaSubconcepts,
+        });
+
+        return this.prismaService.concept.update({
+          data: newData,
+          where,
+        });
       });
-    } catch (error) {
-      throw error;
+    } catch (err) {
+      console.log('Update Concepts transaction failed');
+      throw new HttpException(err, HttpStatus.BAD_REQUEST);
     }
   }
 
@@ -227,15 +363,16 @@ export class ConceptsService {
         await key.reduce(async (antPromise, item) => {
           await antPromise;
           const concept = await this.findOne({ id: item });
-          if (concept.invoiceDetails.length > 0) {
-            throw new HttpException(
-              {
-                status: HttpStatus.PRECONDITION_FAILED,
-                error: `The borrower : ${concept.name}, has associated information and cannot be deleted.`,
-              },
-              HttpStatus.PRECONDITION_FAILED,
-            );
+          if (
+            concept.conceptPriceHistory.length > 0 ||
+            concept.subconcepts.length > 0 ||
+            concept.parentConcepts.length > 0
+          ) {
+            throw new PreconditionFailedException({
+              error: `The concept : ${concept.name}, has associated information and cannot be deleted.`,
+            });
           }
+
           await this.remove({ id: item });
         }, Promise.resolve());
       });

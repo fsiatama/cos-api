@@ -1,11 +1,17 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import {
-  IsString,
-  IsNotEmpty,
   IsUUID,
   IsOptional,
   IsNumber,
+  IsNotEmptyObject,
+  IsObject,
+  ValidateNested,
+  IsDefined,
+  IsDate,
+  IsPositive,
 } from 'class-validator';
+import { UUIDDto } from './filter.dto';
 
 export class ConceptPriceHistoryDto {
   @IsOptional()
@@ -15,22 +21,23 @@ export class ConceptPriceHistoryDto {
   })
   id?: string;
 
-  @IsOptional()
-  @IsString()
+  @IsDefined()
+  @IsDate()
   @ApiProperty({
     description: 'Description of the concept price history record',
   })
   readonly effectiveDate: Date;
 
-  @IsNotEmpty()
+  @IsDefined()
   @IsNumber()
+  @IsPositive()
   @ApiProperty({ description: 'Amount of the concept price history record' })
-  readonly amount: number;
+  readonly price: number;
 
-  @IsNotEmpty()
-  @IsUUID()
-  @ApiProperty({
-    description: 'ID of the concept associated with the invoice',
-  })
-  readonly conceptId: string;
+  @IsNotEmptyObject()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => UUIDDto)
+  @ApiProperty({ type: () => UUIDDto })
+  readonly concept!: UUIDDto;
 }
