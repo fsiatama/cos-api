@@ -110,14 +110,17 @@ model InvoiceDetail {
 }
 
 model PaymentMethod {
-  id       String    @id @default(uuid())
-  name     String
-  payments Payment[]
+  id                    String                 @id @default(uuid())
+  name                  String
+  payments              Payment[]
+  paymentMethodConcepts PaymentMethodConcept[]
 }
 
 model Payment {
   id              String        @id @default(uuid())
   amount          Int
+  fee             Float?
+  description     String?
   paymentMethodId String
   paymentMethod   PaymentMethod @relation(fields: [paymentMethodId], references: [id])
   invoiceId       String
@@ -125,17 +128,18 @@ model Payment {
 }
 
 model Concept {
-  id                  String                @id @default(uuid())
-  name                String                @unique
-  conceptType         ConceptTypeEnum       @default(CREDIT)
-  isToThirdParty      Boolean               @default(false)
-  isPercentage        Boolean               @default(false)
-  isChild             Boolean               @default(false)
-  createdAt           DateTime              @default(now())
-  conceptPriceHistory ConceptPriceHistory[]
-  transactions        Transaction[]
-  subconcepts         Subconcept[]          @relation("ChildConcept")
-  parentConcepts      Subconcept[]          @relation("ParentConcept")
+  id                    String                 @id @default(uuid())
+  name                  String                 @unique
+  conceptType           ConceptTypeEnum        @default(CREDIT)
+  isToThirdParty        Boolean                @default(false)
+  isPercentage          Boolean                @default(false)
+  isChild               Boolean                @default(false)
+  createdAt             DateTime               @default(now())
+  conceptPriceHistory   ConceptPriceHistory[]
+  transactions          Transaction[]
+  subconcepts           Subconcept[]           @relation("ChildConcept")
+  parentConcepts        Subconcept[]           @relation("ParentConcept")
+  paymentMethodConcepts PaymentMethodConcept[]
 }
 
 model Subconcept {
@@ -150,6 +154,17 @@ model Subconcept {
   uinsert       User     @relation(fields: [uinsertId], references: [id], onDelete: Restrict)
 
   @@unique([parentId, childId])
+}
+
+model PaymentMethodConcept {
+  paymentMethodId String
+  conceptId       String
+  amount          Float
+  createdAt       DateTime      @default(now())
+  paymentMethod   PaymentMethod @relation(fields: [paymentMethodId], references: [id])
+  concept         Concept       @relation(fields: [conceptId], references: [id])
+
+  @@id([paymentMethodId, conceptId])
 }
 
 model ConceptPriceHistory {

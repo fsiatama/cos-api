@@ -310,6 +310,8 @@ export class ConceptsService {
       const { data, where } = params;
       const concept = await this.findOne(where);
 
+      // TODO: SI YA EXISTEN INVOICES, NO DEBERIA PODER ELIMINAR O MODICIAR LOS SUBCONCEPTOS
+
       /*if (concept.conceptPriceHistory.) {
         throw new UnprocessableEntityException(
           `The concept : ${concept.name}, has associated information and cannot be updated.`,

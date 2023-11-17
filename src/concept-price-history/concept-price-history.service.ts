@@ -48,7 +48,10 @@ export class ConceptPriceHistoryService {
       return await this.prismaService.conceptPriceHistory.create({
         data,
       });
-    } catch (error) {}
+    } catch (error) {
+      console.log('Create Concepts price transaction failed');
+      throw new HttpException(error, HttpStatus.BAD_REQUEST);
+    }
   }
 
   async findAll(params?: FilterDto) {

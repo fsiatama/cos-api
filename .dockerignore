@@ -1,5 +1,5 @@
-node_modules
-documentation
-test
-dist
+node_modules/**
+documentation/**
+test/**
+dist/**
 npm-debug.log

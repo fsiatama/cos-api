@@ -10,10 +10,15 @@ import {
   InvoiceStatusEnum,
   Prisma,
   ConceptTypeEnum,
-  InvoiceDetail,
 } from '@prisma/client';
 import { UpdateInvoiceDto } from './dto/update-invoice.dto';
-import { InvoiceDto, PaginationArgs, ResponseDto } from '../models';
+import {
+  InvoiceDto,
+  PaginationArgs,
+  ResponseDto,
+  PaymentDto,
+  InvoicePaymentGetPayload,
+} from '../models';
 import { PrismaService } from '../database/prisma.service';
 import { ApplicantsService } from '../applicants/applicants.service';
 import {
@@ -23,6 +28,7 @@ import {
 import { ConceptsService } from '../concepts/concepts.service';
 import { FilterInvoicesDto } from './dto/filter-invoices-dto';
 import { InvoiceWithDetails } from '../models/dto/invoice.dto';
+import { PaymentMethodsService } from '../payment-methods/payment-methods.service';
 
 @Injectable()
 export class InvoicesService {
@@ -30,6 +36,7 @@ export class InvoicesService {
     private prismaService: PrismaService,
     private readonly applicantService: ApplicantsService,
     private readonly conceptsService: ConceptsService,
+    private readonly paymentMethodsService: PaymentMethodsService,
   ) {}
 
   private async getInvoiceDetailsForCreate(
@@ -53,12 +60,37 @@ export class InvoicesService {
     return prismaInvoiceDetails;
   }
 
+  private async getInvoicePaymentsForCreate(
+    payments: PaymentDto[],
+    parentId: string,
+  ) {
+    const prismaPayments: Prisma.PaymentCreateManyInput[] = [];
+    if (payments) {
+      for (const payment of payments) {
+        const originPaymentMethod =
+          await this.paymentMethodsService.getCurrentFeeById({
+            id: payment.paymentMethodId,
+          });
+        const feeRate = originPaymentMethod?.amount / 100 ?? 0;
+        const fee = payment.amount * feeRate;
+        prismaPayments.push({
+          invoiceId: parentId,
+          amount: payment.amount,
+          fee,
+          paymentMethodId: payment.paymentMethodId,
+        });
+      }
+    }
+    return prismaPayments;
+  }
+
   async create(
     createInvoiceDto: InvoiceDto,
     createdBy: string,
   ): Promise<Partial<Invoice>> {
     try {
-      const { applicant, status, invoiceDetail, ...rest } = createInvoiceDto;
+      const { applicant, status, invoiceDetail, payments, ...rest } =
+        createInvoiceDto;
       const defaultStatus = status || InvoiceStatusEnum.DRAFT;
       await this.applicantService.findOne({
         id: applicant.id,
@@ -83,6 +115,15 @@ export class InvoicesService {
 
         await prisma.invoiceDetail.createMany({
           data: prismaInvoiceDetails,
+        });
+
+        const prismaPayments = await this.getInvoicePaymentsForCreate(
+          payments,
+          createdInvoice.id,
+        );
+
+        await prisma.payment.createMany({
+          data: prismaPayments,
         });
 
         return createdInvoice;
@@ -188,6 +229,23 @@ export class InvoicesService {
             },
           },
         },
+        payments: {
+          select: {
+            amount: true,
+            id: true,
+            description: true,
+            paymentMethod: {
+              select: {
+                id: true,
+                paymentMethodConcepts: {
+                  select: {
+                    amount: true,
+                  },
+                },
+              },
+            },
+          },
+        },
       },
       where: whereInput,
     };
@@ -199,12 +257,24 @@ export class InvoicesService {
 
     result.forEach((invoice) => {
       let totalAmount = 0;
+      let totalPayments = 0;
       if (invoice.invoiceDetail && Array.isArray(invoice.invoiceDetail)) {
         totalAmount = invoice.invoiceDetail.reduce((sum, detail) => {
           const subtotal = this.getItemSubtotal(detail);
           return sum + (subtotal || 0);
         }, 0);
       }
+
+      if (invoice.payments && Array.isArray(invoice.payments)) {
+        totalPayments = invoice.payments.reduce((sum, payment) => {
+          console.log(payment);
+
+          //const subtotal = this.getPaymentSubtotal(payment);
+          return sum + (1 || 0);
+        }, 0);
+      }
+
+      invoice.totalPayments = totalPayments;
       invoice.totalAmount = totalAmount;
     });
 
@@ -224,6 +294,11 @@ export class InvoicesService {
         : invoiceDetail.amount;
     const qty = invoiceDetail?.qty ? invoiceDetail.qty : 1;
     return amount * qty;
+  }
+
+  private getPaymentSubtotal(payment: InvoicePaymentGetPayload) {
+    const fee = payment.fee ?? 0;
+    return payment.amount + fee;
   }
 
   async findOne(where: Prisma.InvoiceWhereUniqueInput) {
@@ -261,13 +336,30 @@ export class InvoicesService {
             },
           },
         },
-        payments: true,
+        payments: {
+          select: {
+            amount: true,
+            fee: true,
+            id: true,
+            description: true,
+            paymentMethod: {
+              select: {
+                id: true,
+                paymentMethodConcepts: {
+                  select: {
+                    amount: true,
+                  },
+                },
+              },
+            },
+          },
+        },
       },
     });
     if (!invoice) {
       throw new NotFoundException(`Invoice with id ${where.id} not found`);
     }
-    const { invoiceDetail, ...rest } = invoice;
+    const { invoiceDetail, payments, ...rest } = invoice;
     return {
       ...rest,
       invoiceDetail: invoiceDetail.map((detail) => {
@@ -275,6 +367,17 @@ export class InvoicesService {
         const subtotal = this.getItemSubtotal(detail);
         return {
           conceptId: conceptPrice.concept.id,
+          subtotal,
+          ...others,
+        };
+      }),
+      payments: payments.map((payment) => {
+        const { paymentMethod, ...others } = payment;
+        const subtotal = this.getPaymentSubtotal(payment);
+        console.log(subtotal);
+
+        return {
+          paymentMethodId: paymentMethod.id,
           subtotal,
           ...others,
         };
@@ -287,10 +390,20 @@ export class InvoicesService {
     data: UpdateInvoiceDto;
   }): Promise<Invoice> {
     const { data, where } = params;
-    const { id, applicant, invoiceDetail, ...rest } = data;
+    const { id, applicant, invoiceDetail, payments, ...rest } = data;
 
     try {
       await this.findOne(where);
+      const prismaInvoiceDetails = await this.getInvoiceDetailsForCreate(
+        invoiceDetail,
+        id,
+      );
+
+      const prismaPayments = await this.getInvoicePaymentsForCreate(
+        payments,
+        id,
+      );
+
       const updateData: Prisma.InvoiceUpdateInput = {
         ...rest,
       };
@@ -298,8 +411,23 @@ export class InvoicesService {
         await this.applicantService.findOne({
           id: applicant.id,
         });
+        updateData.applicant = { connect: { id: applicant.id } };
       }
-      updateData.applicant = { connect: { id: applicant.id } };
+
+      if (invoiceDetail) {
+        updateData.invoiceDetail = {
+          deleteMany: {},
+          create: prismaInvoiceDetails,
+        };
+      }
+
+      if (payments) {
+        updateData.payments = {
+          deleteMany: {},
+          create: prismaPayments,
+        };
+      }
+
       return await this.prismaService.invoice.update({
         where,
         data: updateData,

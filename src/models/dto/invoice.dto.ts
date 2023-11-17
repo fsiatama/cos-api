@@ -17,6 +17,7 @@ import {
 } from 'class-validator';
 import { UUIDDto } from './filter.dto';
 import { InvoiceDetailDto } from './invoice-detail.dto';
+import { PaymentDto } from './payment.dto';
 
 export class InvoiceDto {
   @IsOptional()
@@ -63,6 +64,13 @@ export class InvoiceDto {
   @Type(() => InvoiceDetailDto)
   @ApiProperty({ type: () => InvoiceDetailDto })
   readonly invoiceDetail: InvoiceDetailDto[];
+
+  @IsArray()
+  @IsNotEmpty()
+  @ValidateNested({ each: true })
+  @Type(() => PaymentDto)
+  @ApiProperty({ type: () => PaymentDto })
+  readonly payments: PaymentDto[];
 }
 
 const invoiceWithDetails = Prisma.validator<Prisma.InvoiceDefaultArgs>()({
@@ -94,6 +102,23 @@ const invoiceWithDetails = Prisma.validator<Prisma.InvoiceDefaultArgs>()({
         },
       },
     },
+    payments: {
+      select: {
+        amount: true,
+        id: true,
+        description: true,
+        paymentMethod: {
+          select: {
+            id: true,
+            paymentMethodConcepts: {
+              select: {
+                amount: true,
+              },
+            },
+          },
+        },
+      },
+    },
   },
 });
 
@@ -101,4 +126,5 @@ type InvoiceGetPayload = Prisma.InvoiceGetPayload<typeof invoiceWithDetails>;
 
 export interface InvoiceWithDetails extends InvoiceGetPayload {
   totalAmount: number;
+  totalPayments?: number;
 }
